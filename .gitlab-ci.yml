@@ -184,6 +184,7 @@ code_quality:
     - export SUITE_INDEX=${JOB_NAME[-2]}
     - export SUITE_TOTAL=${JOB_NAME[-1]}
     - source ci/touch_make_dependencies
+    - useradd -r test-user
     - make parallel_test_execute
   artifacts:
     paths:
