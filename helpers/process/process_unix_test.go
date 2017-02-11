@@ -112,11 +112,9 @@ var simpleScript = ": | eval $'sleep 60'"
 var nonTerminatableScript = ": | eval $'trap \"sleep 70\" SIGTERM\nsleep 60'"
 
 func TestKillProcessGroupForSimpleScript(t *testing.T) {
-	killWaitTime = 2 * time.Second
 	testKillProcessGroup(t, simpleScript)
 }
 
 func TestKillProcessGroupForNonTerminatableScript(t *testing.T) {
-	killWaitTime = 2 * time.Second
 	testKillProcessGroup(t, nonTerminatableScript)
 }
