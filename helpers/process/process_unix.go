@@ -10,7 +10,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-const ProcessKillWaitTime = 10 * time.Second
+var killWaitTime = 10 * time.Second
 
 func SetProcessGroup(cmd *exec.Cmd) {
 	prepareSysProcAttr(cmd)
@@ -57,7 +57,7 @@ func KillProcessGroup(cmd *exec.Cmd) {
 			select {
 			case <-waitCh:
 				return
-			case <-time.After(ProcessKillWaitTime):
+			case <-time.After(killWaitTime):
 				syscall.Kill(-process.Pid, syscall.SIGKILL)
 			}
 		} else {
@@ -69,7 +69,7 @@ func KillProcessGroup(cmd *exec.Cmd) {
 	select {
 	case <-waitCh:
 		return
-	case <-time.After(ProcessKillWaitTime):
+	case <-time.After(killWaitTime):
 		panic("Process couldn't be killed!")
 	}
 }
