@@ -118,6 +118,18 @@ build_simple: $(GOPATH_SETUP)
 
 build_current: docker build_simple
 
+build_current_docker: RUNNER_BINARY ?= out/binaries/$(NAME)
+build_current_docker: build_current_deb
+	make release_docker_images RUNNER_BINARY=$(RUNNER_BINARY)
+
+build_current_deb: RUNNER_BINARY ?= out/binaries/$(NAME)
+build_current_deb: build_current package-deps package-prepare
+	make package-deb-fpm ARCH=amd64 PACKAGE_ARCH=amd64 RUNNER_BINARY=$(RUNNER_BINARY)
+
+build_current_rpm: RUNNER_BINARY ?= out/binaries/$(NAME)
+build_current_rpm: build_current package-deps package-prepare
+	make package-rpm-fpm ARCH=amd64 PACKAGE_ARCH=amd64 RUNNER_BINARY=$(RUNNER_BINARY)
+
 check_race_conditions:
 	@./scripts/check_race_conditions $(OUR_PACKAGES)
 
@@ -206,6 +218,7 @@ package-rpm: package-deps package-prepare
 	make package-rpm-fpm ARCH=arm PACKAGE_ARCH=arm
 	make package-rpm-fpm ARCH=arm PACKAGE_ARCH=armhf
 
+package-deb-fpm: RUNNER_BINARY ?= out/binaries/$(NAME)-linux-$(ARCH)
 package-deb-fpm:
 	@mkdir -p out/deb/
 	fpm -s dir -t deb -n $(PACKAGE_NAME) -v $(VERSION) \
@@ -232,13 +245,14 @@ package-deb-fpm:
 		--deb-suggests docker-engine \
 		-a $(PACKAGE_ARCH) \
 		packaging/root/=/ \
-		out/binaries/$(NAME)-linux-$(ARCH)=/usr/lib/gitlab-runner/gitlab-runner \
+		$(RUNNER_BINARY)=/usr/lib/gitlab-runner/gitlab-runner \
 		out/helper-images/=/usr/lib/gitlab-runner/helper-images/
 	@if [ -n "$(GPG_KEYID)" ]; then \
 		dpkg-sig -g "--no-tty --digest-algo 'sha512' --passphrase '$(GPG_PASSPHRASE)'" \
 			-k $(GPG_KEYID) --sign builder "out/deb/$(PACKAGE_NAME)_$(PACKAGE_ARCH).deb" ;\
 	fi
 
+package-rpm-fpm: RUNNER_BINARY ?= out/binaries/$(NAME)-linux-$(ARCH)
 package-rpm-fpm:
 	@mkdir -p out/rpm/
 	fpm -s dir -t rpm -n $(PACKAGE_NAME) -v $(VERSION) \
@@ -262,7 +276,7 @@ package-rpm-fpm:
 		--depends tar \
 		-a $(PACKAGE_ARCH) \
 		packaging/root/=/ \
-		out/binaries/$(NAME)-linux-$(ARCH)=/usr/lib/gitlab-runner/gitlab-runner \
+		$(RUNNER_BINARY)=/usr/lib/gitlab-runner/gitlab-runner \
 		out/helper-images/=/usr/lib/gitlab-runner/helper-images/
 	@if [ -n "$(GPG_KEYID)" ] ; then \
 		echo "yes" | setsid rpm \
@@ -342,6 +356,7 @@ prepare_index:
 	# Preparing index file
 	@./ci/prepare_index
 
+release_docker_images: RUNNER_BINARY ?= out/binaries/gitlab-runner-linux-amd64
 release_docker_images:
 	# Releasing Docker images
 	@./ci/release_docker_images
