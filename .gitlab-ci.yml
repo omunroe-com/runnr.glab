@@ -156,6 +156,7 @@ codequality:
 
 sast:
   <<: *except_docs
+  stage: test
   image: docker:stable
   variables:
     DOCKER_DRIVER: overlay2
