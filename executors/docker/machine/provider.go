@@ -287,12 +287,46 @@ func (m *machineProvider) createMachines(config *common.RunnerConfig, data *mach
 	}
 }
 
+// intermediateMachineList returns a list of machines that might not yet be persisted on disk,
+// these machines are the ones between being virtually created, and `docker-machine create` getting executed
+// we populate this data set to overcome the race conditions related to not-full set of machines returned
+// by `docker-machine ps -q`
+func (m *machineProvider) intermediateMachineList(excludedMachines []string) (machines []string) {
+	var excludedSet map[string]struct{}
+
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	for _, details := range m.details {
+		if details.isPersistedOnDisk() {
+			continue
+		}
+
+		// lazy init set, as most of times we don't create new machines
+		if excludedSet == nil {
+			excludedSet = make(map[string]struct{})
+			for _, excludedMachine := range excludedMachines {
+				excludedSet[excludedMachine] = struct{}{}
+			}
+		}
+
+		if _, ok := excludedSet[details.Name]; ok {
+			continue
+		}
+
+		machines = append(machines, details.Name)
+	}
+
+	return
+}
+
 func (m *machineProvider) loadMachines(config *common.RunnerConfig) (machines []string, err error) {
 	machines, err = m.machine.List()
 	if err != nil {
 		return nil, err
 	}
 
+	machines = append(machines, m.intermediateMachineList(machines)...)
 	machines = filterMachineList(machines, machineFilter(config))
 	return
 }
