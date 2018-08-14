@@ -56,10 +56,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	return nil
 }
 
-func (s *executor) killAndWait(cmd *exec.Cmd, waitCh chan error) error {
+func (s *executor) killAndWait(group process.Group, waitCh chan error) error {
 	for {
 		s.Debugln("Aborting command...")
-		process.KillProcessGroup(cmd)
+		group.Kill()
 		select {
 		case <-time.After(time.Second):
 		case err := <-waitCh:
@@ -99,14 +99,16 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	}
 
 	// Prepare process group
-	startedCh := make(chan struct{})
-	process.PrepareProcessGroup(c, s.BuildShell, s.Build, startedCh)
-	defer process.KillProcessGroup(c)
+	startedCh := make(chan bool)
+
+	group := process.NewGroup(c, s.Build, s.Shell(), startedCh)
+	group.Prepare()
+	defer group.Kill()
 
 	// Start a process
 	err := c.Start()
-	startedCh <- struct{}{}
 	close(startedCh)
+
 	if err != nil {
 		return fmt.Errorf("Failed to start process: %s", err)
 	}
@@ -127,7 +129,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		return err
 
 	case <-cmd.Context.Done():
-		return s.killAndWait(c, waitCh)
+		return s.killAndWait(group, waitCh)
 	}
 }
 

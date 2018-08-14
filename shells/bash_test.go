@@ -1,10 +1,8 @@
 package shells
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -25,74 +23,58 @@ func TestBash_IfCmdShellEscapes(t *testing.T) {
 	assert.Equal(t, `if $'foo' "x&(y)" >/dev/null 2>/dev/null; then`+"\n", writer.String())
 }
 
-var nonExistingUser = user.User{
-	Name: "non-existing-user",
-}
-var existingUser = user.User{
-	Name: "test-user",
-	Uid:  60000,
-	Gid:  60000,
-}
-
-var noUserShellScriptInfo = common.ShellScriptInfo{}
-var nonExistingUserShellScriptInfo = common.ShellScriptInfo{
-	User: nonExistingUser.Name,
-}
-var existingUserShellScriptInfo = common.ShellScriptInfo{
-	User: existingUser.Name,
-}
-
-type fakeUserResolver struct {
-	supported bool
-}
-
-func (ur *fakeUserResolver) getCredentials(userName string) (*common.CommandCredential, error) {
-	if !ur.supported {
-		return nil, user.ErrUnsupported
+func TestBashShell_GetConfiguration(t *testing.T) {
+	testCases := map[string]struct {
+		shellType         common.ShellType
+		expectedCommand   string
+		expectedArguments []string
+		expectedLogin     bool
+	}{
+		"normal shell": {
+			shellType:         common.NormalShell,
+			expectedCommand:   "bash",
+			expectedArguments: []string{},
+			expectedLogin:     false,
+		},
+		"login shell": {
+			shellType:       common.LoginShell,
+			expectedCommand: "bash",
+			expectedArguments: []string{
+				"--login",
+			},
+			expectedLogin: true,
+		},
 	}
 
-	if userName == nonExistingUser.Name {
-		return nil, fmt.Errorf("no matching entries in passwd file")
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			shell := &BashShell{
+				Shell: "bash",
+			}
+
+			configuration, err := shell.GetConfiguration(common.ShellScriptInfo{
+				Type: testCase.shellType,
+			})
+			require.NoError(t, err)
+
+			assert.Equal(t, testCase.expectedCommand, configuration.Command)
+
+			if len(testCase.expectedArguments) == 0 {
+				assert.Empty(t, configuration.Arguments)
+			} else {
+				assert.Equal(t, testCase.expectedArguments, configuration.Arguments)
+			}
+
+			assert.Contains(t, configuration.DockerCommand, "sh")
+			assert.Contains(t, configuration.DockerCommand, "-c")
+
+			require.Len(t, configuration.DockerCommand, 3)
+
+			if testCase.expectedLogin {
+				assert.Contains(t, configuration.DockerCommand[2], "exec /usr/bin/bash --login")
+			} else {
+				assert.NotContains(t, configuration.DockerCommand[2], "exec /usr/bin/bash --login")
+			}
+		})
 	}
-
-	return &common.CommandCredential{UID: uint32(existingUser.Uid), GID: uint32(existingUser.Gid)}, nil
-}
-
-func TestBash_CommandCredentials(t *testing.T) {
-	shell := &BashShell{Shell: "bash", userResolver: &fakeUserResolver{true}}
-
-	script, err := shell.GetConfiguration(noUserShellScriptInfo)
-	assert.NoError(t, err)
-	require.NotNil(t, script)
-	assert.Nil(t, script.CommandCredential)
-
-	script, err = shell.GetConfiguration(nonExistingUserShellScriptInfo)
-	assert.EqualError(t, err, "no matching entries in passwd file")
-	assert.Nil(t, script)
-
-	script, err = shell.GetConfiguration(existingUserShellScriptInfo)
-	assert.NoError(t, err)
-	require.NotNil(t, script)
-	require.NotNil(t, script.CommandCredential)
-	assert.Equal(t, uint32(existingUser.Uid), script.CommandCredential.UID)
-	assert.Equal(t, uint32(existingUser.Gid), script.CommandCredential.GID)
-}
-
-func TestBash_CommandCredentialsUnsupported(t *testing.T) {
-	shell := &BashShell{Shell: "bash", userResolver: &fakeUserResolver{false}}
-
-	script, err := shell.GetConfiguration(noUserShellScriptInfo)
-	assert.NoError(t, err)
-	require.NotNil(t, script)
-	assert.Nil(t, script.CommandCredential)
-
-	script, err = shell.GetConfiguration(nonExistingUserShellScriptInfo)
-	assert.NoError(t, err)
-	require.NotNil(t, script)
-	assert.Nil(t, script.CommandCredential)
-
-	script, err = shell.GetConfiguration(existingUserShellScriptInfo)
-	assert.NoError(t, err)
-	require.NotNil(t, script)
-	assert.Nil(t, script.CommandCredential)
 }

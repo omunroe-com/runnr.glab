@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/opencontainers/runc/libcontainer/user"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
@@ -37,30 +35,9 @@ fi
 
 `
 
-type userResolverInterface interface {
-	getCredentials(userName string) (*common.CommandCredential, error)
-}
-
-type userResolver struct{}
-
-func (ur *userResolver) getCredentials(userName string) (*common.CommandCredential, error) {
-	foundUser, err := user.LookupUser(userName)
-	if err != nil {
-		return nil, err
-	}
-
-	credentials := &common.CommandCredential{
-		UID: uint32(foundUser.Uid),
-		GID: uint32(foundUser.Gid),
-	}
-
-	return credentials, nil
-}
-
 type BashShell struct {
 	AbstractShell
-	Shell        string
-	userResolver userResolverInterface
+	Shell string
 }
 
 type BashWriter struct {
@@ -231,33 +208,18 @@ func (b *BashShell) GetName() string {
 }
 
 func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (script *common.ShellConfiguration, err error) {
+	script = &common.ShellConfiguration{}
+	script.Command = b.Shell
+
 	var detectScript string
 	if info.Type == common.LoginShell {
+		script.Arguments = append(script.Arguments, "--login")
 		detectScript = strings.Replace(bashDetectShell, "$@", "--login", -1)
 	} else {
 		detectScript = strings.Replace(bashDetectShell, "$@", "", -1)
 	}
 
-	script = &common.ShellConfiguration{}
 	script.DockerCommand = []string{"sh", "-c", detectScript}
-
-	script.Command = b.Shell
-	if info.Type == common.LoginShell {
-		script.Arguments = append(script.Arguments, "--login")
-	}
-
-	if info.User != "" {
-		if b.userResolver == nil {
-			b.userResolver = &userResolver{}
-		}
-
-		credential, err := b.userResolver.getCredentials(info.User)
-		if err != nil && err != user.ErrUnsupported {
-			return nil, err
-		}
-
-		script.CommandCredential = credential
-	}
 
 	return
 }
