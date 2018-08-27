@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/csv"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"testing"
 	"time"
@@ -30,11 +32,23 @@ func runOnFakeProcessKiller(t *testing.T, handler func(killer *mockFakeProcessKi
 	handler(killer)
 }
 
+func getSleepCommand(duration string) *exec.Cmd {
+	command := "sleep.go"
+	if runtime.GOOS == "windows" {
+		command = "sleep.exe"
+	}
+
+	_, filename, _, _ := runtime.Caller(0)
+	sleepCommandSource := filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "..", "..", "tests", "sleep", command))
+
+	return exec.Command("go", "run", sleepCommandSource, duration)
+}
+
 func TestGroup_KillNoProcess(t *testing.T) {
 	logrusHelper.RunOnHijackedLogrusOutput(func(output *bytes.Buffer) {
 		logrusHelper.RunOnHijackedLogrusLevel(logrus.DebugLevel, func() {
 			runOnFakeProcessKiller(t, func(killer *mockFakeProcessKiller) {
-				cmd := exec.Command("powershell.exe", "-Command", "sleep 2")
+				cmd := getSleepCommand("2s")
 				logger := logrus.NewEntry(logrus.StandardLogger())
 
 				group := New(cmd, logger)
@@ -51,7 +65,7 @@ func TestGroup_Kill(t *testing.T) {
 	logrusHelper.RunOnHijackedLogrusOutput(func(output *bytes.Buffer) {
 		logrusHelper.RunOnHijackedLogrusLevel(logrus.DebugLevel, func() {
 			runOnFakeProcessKiller(t, func(killer *mockFakeProcessKiller) {
-				cmd := exec.Command("powershell.exe", "-Command", "sleep 5")
+				cmd := getSleepCommand("10s")
 				logger := logrus.NewEntry(logrus.StandardLogger())
 
 				group := New(cmd, logger)

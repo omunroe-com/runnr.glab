@@ -3,6 +3,8 @@ package process
 import (
 	"bytes"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -12,8 +14,20 @@ import (
 	logrusHelper "gitlab.com/gitlab-org/gitlab-runner/helpers/logrus"
 )
 
+func getSleepCommand(duration string) *exec.Cmd {
+	command := "sleep.go"
+	if runtime.GOOS == "windows" {
+		command = "sleep.exe"
+	}
+
+	_, filename, _, _ := runtime.Caller(0)
+	sleepCommandSource := filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "..", "tests", "sleep", command))
+
+	return exec.Command("go", "run", sleepCommandSource, duration)
+}
+
 func prepareGroup(t *testing.T) (*exec.Cmd, chan bool, Group) {
-	cmd := exec.Command("sleep", "1")
+	cmd := getSleepCommand("1s")
 	build := &common.Build{}
 	build.ID = 10
 	build.GitInfo = common.GitInfo{
