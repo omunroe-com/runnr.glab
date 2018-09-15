@@ -442,27 +442,27 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:ea757d3451e22e6e7a2f8ad228963f32177b4f208ae81c386fccf62f00612892"
-  name = "github.com/minio/go-homedir"
-  packages = ["."]
-  pruneopts = "N"
-  revision = "4d76aabb80b22bad8695d3904e943f1fb5e6199f"
-
-[[projects]]
-  digest = "1:7aadf1a2b4d4faccb3afd541571dbd249c6e367e7b282ab2f71bd85f5c30f524"
+  digest = "1:5ad1c7728612b133ffd8836cd90ea8e44b2b06b0498b15ee7089391da921db01"
   name = "github.com/minio/minio-go"
   packages = [
     ".",
     "pkg/credentials",
     "pkg/encrypt",
-    "pkg/policy",
     "pkg/s3signer",
     "pkg/s3utils",
     "pkg/set",
   ]
   pruneopts = "N"
-  revision = "4e0f567303d4cc90ceb055a451959fb9fc391fb9"
-  version = "3.0.3"
+  revision = "519049881e73150d1bbeac1d443e7c96b76e1b8d"
+  version = "v6.0.6"
+
+[[projects]]
+  digest = "1:6e40eef6efa3f62764e2078653ccc9d8c0126571a99ce852c75504ef5b88062e"
+  name = "github.com/mitchellh/go-homedir"
+  packages = ["."]
+  pruneopts = "N"
+  revision = "ae18d6b8b3205b561c79e8e5f69bff09736185f4"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:f66d87ce300a9e7b87bbfa1d4c89f65e1548b9872c5be28e3274f5f722cb4114"
@@ -653,15 +653,22 @@
   version = "v0.14.0"
 
 [[projects]]
-  digest = "1:71493c600742696fffe16a76246b0e834931a2999a3df6801f124e4c3be8dec5"
+  digest = "1:a90bf5fb63567bc506ee8e10eee88bd72c7cd897c5e8c59ed2052599694401b8"
   name = "golang.org/x/crypto"
   packages = [
+    "argon2",
+    "blake2b",
     "curve25519",
+    "ed25519",
+    "ed25519/internal/edwards25519",
+    "internal/chacha20",
+    "internal/subtle",
+    "poly1305",
     "ssh",
     "ssh/terminal",
   ]
   pruneopts = "N"
-  revision = "1f22c0103821b9390939b6776727195525381532"
+  revision = "0e37d006457bf46f9e6692014ba72ef82c33022c"
 
 [[projects]]
   digest = "1:12bf351167b765a0f2da3b384cb7dc2fdaedc3304e7ec5743914728a6c99242f"
@@ -695,9 +702,10 @@
   revision = "ef147856a6ddbb60760db74283d2424e98c87bff"
 
 [[projects]]
-  digest = "1:53dfde12c05b3ffca6f4bb6dd2d45677a7b4e00df35b1d0b883a2e44dfbc4fdc"
+  digest = "1:7480e3da9a1bf944d978256fb9ad3ab823abdf6683dc63593b9dc2ebcd6d31ba"
   name = "golang.org/x/sys"
   packages = [
+    "cpu",
     "unix",
     "windows",
     "windows/registry",
@@ -706,7 +714,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "N"
-  revision = "042a8f53ce82bbe081222da955159491e32146a0"
+  revision = "d0be0721c37eeb5299f245a996a483160fc36940"
 
 [[projects]]
   digest = "1:3909e11965ccf1e7555e340338296d95fea9e8db2e6c873ee53a60b72916a33b"

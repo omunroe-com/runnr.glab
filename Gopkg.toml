@@ -85,7 +85,7 @@ ignored = ["test", "appengine"]
 
 [[constraint]]
   name = "github.com/minio/minio-go"
-  version = "3.0.3"
+  version = "6.0.6"
 
 [[constraint]]
   name = "github.com/prometheus/client_golang"
@@ -111,7 +111,7 @@ ignored = ["test", "appengine"]
 
 [[constraint]]
   name = "golang.org/x/crypto"
-  revision = "1f22c0103821b9390939b6776727195525381532"
+  revision = "0e37d006457bf46f9e6692014ba72ef82c33022c"
 
 [[constraint]]
   name = "golang.org/x/net"
@@ -278,7 +278,7 @@ ignored = ["test", "appengine"]
 
 [[override]]
   name = "golang.org/x/sys"
-  revision = "042a8f53ce82bbe081222da955159491e32146a0"
+  revision = "d0be0721c37eeb5299f245a996a483160fc36940"
 
 [[override]]
   name = "golang.org/x/text"
