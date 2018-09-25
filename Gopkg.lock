@@ -653,7 +653,7 @@
   version = "v0.14.0"
 
 [[projects]]
-  digest = "1:a90bf5fb63567bc506ee8e10eee88bd72c7cd897c5e8c59ed2052599694401b8"
+  digest = "1:f03ca08802858c40ff3618c4613cb922db00c62ab60a8a9a145dd6e1a09a5924"
   name = "golang.org/x/crypto"
   packages = [
     "argon2",
@@ -662,13 +662,12 @@
     "ed25519",
     "ed25519/internal/edwards25519",
     "internal/chacha20",
-    "internal/subtle",
     "poly1305",
     "ssh",
     "ssh/terminal",
   ]
   pruneopts = "N"
-  revision = "0e37d006457bf46f9e6692014ba72ef82c33022c"
+  revision = "d9133f5469342136e669e85192a26056b587f503"
 
 [[projects]]
   digest = "1:12bf351167b765a0f2da3b384cb7dc2fdaedc3304e7ec5743914728a6c99242f"
@@ -705,7 +704,6 @@
   digest = "1:7480e3da9a1bf944d978256fb9ad3ab823abdf6683dc63593b9dc2ebcd6d31ba"
   name = "golang.org/x/sys"
   packages = [
-    "cpu",
     "unix",
     "windows",
     "windows/registry",

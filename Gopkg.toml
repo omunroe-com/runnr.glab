@@ -111,7 +111,7 @@ ignored = ["test", "appengine"]
 
 [[constraint]]
   name = "golang.org/x/crypto"
-  revision = "0e37d006457bf46f9e6692014ba72ef82c33022c"
+  revision = "d9133f5469342136e669e85192a26056b587f503"
 
 [[constraint]]
   name = "golang.org/x/net"
