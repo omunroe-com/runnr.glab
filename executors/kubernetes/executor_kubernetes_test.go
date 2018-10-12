@@ -18,6 +18,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
@@ -1751,6 +1752,116 @@ func TestInteractiveTerminal(t *testing.T) {
 	t.Log(out)
 
 	assert.Contains(t, out, "Terminal is connected, will time out in 2s...")
+}
+
+func TestInteractiveTerminal_Cancel(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "kubectl", "cluster-info") {
+		return
+	}
+
+	hook := test.NewGlobal()
+
+	client, err := getKubeClient(&common.KubernetesConfig{}, &overwrites{})
+	require.NoError(t, err)
+	secrets, err := client.CoreV1().Secrets("default").List(metav1.ListOptions{})
+	require.NoError(t, err)
+
+	successfulBuild, err := common.GetRemoteBuildResponse("sleep 5")
+	require.NoError(t, err)
+	successfulBuild.Image.Name = "docker:git"
+
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					BearerToken: string(secrets.Items[0].Data["token"]),
+				},
+			},
+		},
+	}
+
+	sess, err := session.NewSession(nil)
+	build.Session = sess
+
+	var buildOut bytes.Buffer
+	trace := common.Trace{Writer: &buildOut}
+	go func() {
+		err = build.Run(
+			&common.Config{
+				SessionServer: common.SessionServer{
+					SessionTimeout: 1800,
+				},
+			},
+			&trace,
+		)
+		require.Error(t, err)
+	}()
+
+	srv := httptest.NewServer(build.Session.Mux())
+	defer srv.Close()
+
+	u := url.URL{
+		Scheme: "ws",
+		Host:   srv.Listener.Addr().String(),
+		Path:   build.Session.Endpoint + "/exec",
+	}
+	headers := http.Header{
+		"Authorization": []string{build.Session.Token},
+	}
+
+	var webSocket *websocket.Conn
+	var resp *http.Response
+
+	// Wait for build and session to start.
+	started := time.Now()
+	for time.Since(started) < 5*time.Second {
+		webSocket, resp, err = websocket.DefaultDialer.Dial(u.String(), headers)
+		if err == nil {
+			break
+		}
+
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	require.NotNil(t, webSocket)
+	defer webSocket.Close()
+	require.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
+
+	// Know when the session timeout starts.
+	started = time.Now()
+	for time.Since(started) < 5*time.Second {
+		if !strings.Contains(buildOut.String(), "Terminal is connected, will time out in") {
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		break
+	}
+
+	// Signal that we don't want the build anymore.
+	trace.CancelFunc()
+
+	// Deadline for it to be cleaned up.
+	started = time.Now()
+	for time.Since(started) < 5*time.Second {
+		if build.Session.Connected() {
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		break
+	}
+
+	var sessionKillLogged bool
+	for _, entry := range hook.AllEntries() {
+		if strings.Contains(entry.Message, "Build cancelled, killing session") {
+			sessionKillLogged = true
+		}
+	}
+
+	assert.False(t, build.Session.Connected())
+	assert.True(t, sessionKillLogged)
+	t.Log(buildOut.String())
 }
 
 type FakeReadCloser struct {

@@ -347,7 +347,7 @@ func (b *Build) retryCreateExecutor(options ExecutorPrepareOptions, provider Exe
 	return
 }
 
-func (b *Build) waitForTerminal(timeout time.Duration) {
+func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) {
 	if b.Session == nil || !b.Session.Connected() {
 		return
 	}
@@ -360,6 +360,12 @@ func (b *Build) waitForTerminal(timeout time.Duration) {
 	)
 
 	select {
+	case <-ctx.Done():
+		b.Log().Infoln("Build cancelled, killing session")
+		err := b.Session.Kill()
+		if err != nil {
+			b.Log().WithError(err).Warn("Failed to kill session")
+		}
 	case <-time.After(timeout):
 		err := fmt.Errorf(
 			"Terminal session timed out (maximum time allowed - %s)",
@@ -375,7 +381,10 @@ func (b *Build) waitForTerminal(timeout time.Duration) {
 		err := fmt.Errorf("aborted: %v", signal)
 		b.logger.Infoln("Terminal disconnected")
 		b.Log().WithError(err).Debugln("Terminal disconnected")
-		b.Session.Kill()
+		err = b.Session.Kill()
+		if err != nil {
+			b.Log().WithError(err).Warn("Failed to kill session")
+		}
 	}
 }
 
@@ -444,7 +453,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	executor, err = b.retryCreateExecutor(options, provider, b.logger)
 	if err == nil {
 		err = b.run(ctx, executor)
-		b.waitForTerminal(globalConfig.SessionServer.GetSessionTimeout())
+		b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout())
 	}
 	if executor != nil {
 		executor.Finish(err)
