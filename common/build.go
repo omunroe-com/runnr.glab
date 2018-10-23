@@ -352,10 +352,16 @@ func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) {
 		return
 	}
 
+	expiryTime, _ := ctx.Deadline()
+
+	if expiryTime.Before(time.Now().Add(timeout)) {
+		timeout = expiryTime.Sub(time.Now())
+	}
+
 	b.logger.Infoln(
 		fmt.Sprintf(
 			"Terminal is connected, will time out in %s...",
-			timeout,
+			helpers.RoundDuration(timeout, time.Second),
 		),
 	)
 
@@ -369,7 +375,7 @@ func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) {
 	case <-time.After(timeout):
 		err := fmt.Errorf(
 			"Terminal session timed out (maximum time allowed - %s)",
-			timeout,
+			helpers.RoundDuration(timeout, time.Second),
 		)
 		b.logger.Infoln(err.Error())
 		b.Log().WithError(err).Debugln("Connection closed")
